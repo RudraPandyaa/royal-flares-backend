@@ -12,6 +12,8 @@ import { GraphiqlPlugin } from '@vendure/graphiql-plugin';
 import { CloudinaryAssetStorageStrategy } from './cloudinary/cloudinary-storage.strategy';
 import 'dotenv/config';
 import path from 'path';
+import { razorpayPaymentHandler } from './payments/razorpay-payment.handler';
+import { RazorpayPlugin } from './plugins/razorpay/razorpay.plugin';
 
 const IS_DEV = process.env.APP_ENV === 'dev';
 // PORT wins because hosting platforms inject it into the environment at runtime, and that
@@ -62,7 +64,10 @@ export const config: VendureConfig = {
         },
     },
     paymentOptions: {
-        paymentMethodHandlers: [dummyPaymentHandler],
+    paymentMethodHandlers: [
+        dummyPaymentHandler,
+        razorpayPaymentHandler,
+    ],
     },
     // When adding or altering custom field definitions, the database will
     // need to be updated. See the "Migrations" section in README.md.
@@ -72,7 +77,7 @@ export const config: VendureConfig = {
         AssetServerPlugin.init({
             route: 'assets',
             assetUploadDir: path.join(__dirname, '../static/assets'),
-
+            
             storageStrategyFactory: () => {
                 return new CloudinaryAssetStorageStrategy();
             },
@@ -80,6 +85,7 @@ export const config: VendureConfig = {
             // be guessed correctly, but for production it will usually need
             // to be set manually to match your production url.
         }),
+        RazorpayPlugin,
         DefaultSchedulerPlugin.init(),
         DefaultJobQueuePlugin.init({ useDatabaseForBuffer: true }),
         DefaultSearchPlugin.init({ bufferUpdates: false, indexStockStatus: true }),
