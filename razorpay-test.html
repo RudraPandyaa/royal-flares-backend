@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Royal Flares Razorpay Test</title>
+</head>
+
+<body>
+    <h2>Royal Flares - Razorpay Test</h2>
+    <p>Amount: ₹3,814.94</p>
+
+    <button id="pay-btn">Pay with Razorpay</button>
+
+    <h3>Payment Response</h3>
+    <pre id="result">Complete the payment to see the response.</pre>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        const options = {
+            key: "rzp_test_TbyOWcy6j0UH9x",
+
+            amount: 381494,
+
+            currency: "INR",
+
+            name: "Royal Flares",
+
+            description: "Test Order Payment",
+
+            order_id: "order_TcENXSZwSgcQYR",
+
+            handler: function (response) {
+                document.getElementById("result").textContent =
+                    JSON.stringify(response, null, 2);
+
+                console.log("Razorpay Payment Success:", response);
+            },
+
+            theme: {}
+        };
+
+        const razorpay = new Razorpay(options);
+
+        document.getElementById("pay-btn").onclick = function (event) {
+            razorpay.open();
+            event.preventDefault();
+        };
+    </script>
+</body>
+</html>
