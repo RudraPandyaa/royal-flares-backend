@@ -65,13 +65,21 @@ export const config: VendureConfig = {
     },
     paymentOptions: {
     paymentMethodHandlers: [
-        dummyPaymentHandler,
         razorpayPaymentHandler,
     ],
     },
     // When adding or altering custom field definitions, the database will
     // need to be updated. See the "Migrations" section in README.md.
-    customFields: {},
+    customFields: {
+        Order: [
+            {
+            name: 'razorpayOrderId',
+            type: 'string',
+            nullable: true,
+            public: false,
+            },
+        ],
+    },
     plugins: [
         GraphiqlPlugin.init(),
         AssetServerPlugin.init({

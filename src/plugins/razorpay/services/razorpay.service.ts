@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import {
   ActiveOrderService,
+  EntityHydrator,
   RequestContext,
+  TransactionalConnection,
 } from '@vendure/core';
 import Razorpay from 'razorpay';
 
@@ -11,6 +13,8 @@ export class RazorpayService {
 
   constructor(
     private activeOrderService: ActiveOrderService,
+    private connection: TransactionalConnection,
+    private entityHydrator: EntityHydrator,
   ) {
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -35,6 +39,17 @@ export class RazorpayService {
       throw new Error('No active Vendure order found');
     }
 
+    await this.entityHydrator.hydrate(ctx, order, {
+    relations: [
+      'lines',
+      'lines.taxCategory',
+      // 'lines.adjustments',
+      'surcharges',
+      'shippingLines',
+      'shippingLines.shippingMethod',
+    ],
+  });
+
     if (order.totalWithTax <= 0) {
       throw new Error('Order total must be greater than zero');
     }
@@ -47,6 +62,15 @@ export class RazorpayService {
         vendureOrderCode: order.code,
       },
     });
+
+    order.customFields = {
+      ...order.customFields,
+      razorpayOrderId: razorpayOrder.id,
+    };
+
+    await this.connection
+      .getRepository(ctx, 'Order')
+      .save(order);
 
     return {
       id: razorpayOrder.id,

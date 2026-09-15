@@ -2,7 +2,6 @@ import {
   LanguageCode,
   PaymentMethodHandler,
 } from '@vendure/core';
-
 import crypto from 'crypto';
 
 export const razorpayPaymentHandler = new PaymentMethodHandler({
@@ -31,7 +30,14 @@ export const razorpayPaymentHandler = new PaymentMethodHandler({
         razorpay_signature,
       } = metadata;
 
+      const storedRazorpayOrderId = (
+        order.customFields as {
+          razorpayOrderId?: string | null;
+        }
+      )?.razorpayOrderId;
+      
       if (
+        !storedRazorpayOrderId ||
         !razorpay_order_id ||
         !razorpay_payment_id ||
         !razorpay_signature
@@ -40,6 +46,15 @@ export const razorpayPaymentHandler = new PaymentMethodHandler({
           amount,
           state: 'Declined' as const,
           errorMessage: 'Missing Razorpay payment details',
+          metadata,
+        };
+      }
+
+      if (storedRazorpayOrderId !== razorpay_order_id) {
+        return {
+          amount,
+          state: 'Declined' as const,
+          errorMessage: 'Razorpay order ID mismatch',
           metadata,
         };
       }
@@ -53,11 +68,25 @@ export const razorpayPaymentHandler = new PaymentMethodHandler({
       const generatedSignature = crypto
         .createHmac('sha256', secret)
         .update(
-          `${razorpay_order_id}|${razorpay_payment_id}`,
+          `${storedRazorpayOrderId}|${razorpay_payment_id}`,
         )
         .digest('hex');
 
-      if (generatedSignature !== razorpay_signature) {
+      const expected = Buffer.from(
+        generatedSignature,
+        'utf8',
+      );
+
+      const received = Buffer.from(
+        razorpay_signature,
+        'utf8',
+      );
+
+      const signatureIsValid =
+        expected.length === received.length &&
+        crypto.timingSafeEqual(expected, received);
+
+      if (!signatureIsValid) {
         return {
           amount,
           state: 'Declined' as const,
@@ -71,7 +100,7 @@ export const razorpayPaymentHandler = new PaymentMethodHandler({
         state: 'Settled' as const,
         transactionId: razorpay_payment_id,
         metadata: {
-          razorpayOrderId: razorpay_order_id,
+          razorpayOrderId: storedRazorpayOrderId,
           razorpayPaymentId: razorpay_payment_id,
         },
       };
@@ -88,9 +117,7 @@ export const razorpayPaymentHandler = new PaymentMethodHandler({
     }
   },
 
-  settlePayment: async () => {
-    return {
-      success: true,
-    };
-  },
+  settlePayment: async () => ({
+    success: true,
+  }),
 });
